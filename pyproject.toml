@@ -18,7 +18,7 @@ classifiers = [
     "Natural Language :: English",
 ]
 dependencies = [
-    "numpy", "scipy", "pandas", "matplotlib", "xspline==0.0.7", "pplkit"
+    "numpy", "scipy", "pandas", "matplotlib", "xspline==0.0.7", "pplkit", "fire"
 ]
 
 [project.optional-dependencies]

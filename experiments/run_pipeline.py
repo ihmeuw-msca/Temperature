@@ -15,9 +15,7 @@ Here is the outcome list:
 * neonatal
 """
 
-import os
-import sys
-
+import fire
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -31,28 +29,14 @@ from temperature import (
     viz,
 )
 
-DATA_PATH = {
-    # 'old_data':'/home/j/temp/zhengp/temperature_current/data/'\
-    #            'mrBrt_R_meanTempDegree_adm1_dailyTemp_refzoneMean.csv',
-    # 'new_data':'/home/j/temp/Jeff/temperature/combinedGraphs/nonParametricTests/era5_chn/data/'\
-    #            'mrBrt_R_meanTempDegree_adm1_dailyTemp_refzoneMean_allLocations.csv'
-    # 'withZaf_10000_draws_withSDI':'/home/j/temp/Jeff/temperature/combinedGraphs/nonParametricTests/withZaf/data/'\
-    #              'mrBrt_R_meanTempDegree_adm1_dailyTemp_refzoneMean_2-28_allLocations+sdi.csv'
-    "test_score": "/home/j/temp/Jeff/temperature/combinedGraphs/nonParametricTests/withZaf/data/"
-    "mrBrt_R_meanTempDegree_adm1_dailyTemp_refzoneMean_2-28_allLocations.csv"
-}
 
-
-def run_temp_model(
+def main(
     outcome: str,
-    path_to_data: str,
-    path_to_result_folder: str,
+    data: str,
+    result: str,
     n_samples: int = 1000,
 ):
-    dataif = DataInterface(
-        data=path_to_data,
-        result=path_to_result_folder,
-    )
+    dataif = DataInterface(data=data, result=result)
 
     # # get temp stuff
     # df = pd.read_csv(path_to_data)
@@ -69,7 +53,7 @@ def run_temp_model(
 
     # load data
     # -------------------------------------------------------------------------
-    tdata = process.load_data(path_to_data, outcome)
+    tdata = process.load_data(dataif.data, outcome)
     tdata = actions.mtslice.adjust_mean(tdata)
     dataif.dump_result(tdata, f"{outcome}_tdata.pkl")
 
@@ -114,7 +98,7 @@ def run_temp_model(
     dataif.dump_result(curve_samples_df, f"{outcome}_curve_samples.parquet")
 
     evidence_score = score.scorelator(
-        curve_samples_df, trend_result, tdata, outcome, path_to_result_folder
+        curve_samples_df, trend_result, tdata, outcome, dataif.result
     )
     dataif.dump_result(evidence_score, f"{outcome}_score.csv")
 
@@ -144,34 +128,5 @@ def run_temp_model(
         plt.close(fig)
 
 
-def submit_all_outcomes():
-    df = pd.read_csv(list(DATA_PATH.values())[0])
-    outcomes = [
-        i.replace("lnRr_", "")
-        for i in list(df)
-        if i.startswith("lnRr_") and not i.endswith(("_upper", "_lower"))
-    ]
-    qsub_str = (
-        "qsub -N {job_name} -P proj_mscm -q long.q -l m_mem_free=3G "
-        "-l fthread=6 -o omp_num_threads=6 -b y "
-        "-l archive=TRUE -e /share/temp/sgeoutput/jiaweihe/errors -o /share/temp/sgeoutput/jiaweihe/output "
-        "/ihme/code/mscm/miniconda3/envs/mrtool_0.0.1/bin/python "
-        "/ihme/homes/jiaweihe/msca/others/Temperature/experiments/run_experiments.py "
-        "{outcome}"
-    )
-
-    for outcome in outcomes:
-        job_id = os.popen(
-            qsub_str.format(job_name=f"temp_{outcome}", outcome=outcome)
-        ).read()
-        print(job_id)
-
-
 if __name__ == "__main__":
-    for data_label, data_path in DATA_PATH.items():
-        run_temp_model(
-            outcome=sys.argv[1],
-            path_to_data=data_path,
-            path_to_result_folder=f"/home/j/temp/jiaweihe/temperature/2020/{data_label}/{sys.argv[1]}",
-            n_samples=10000,
-        )
+    fire.Fire(main)
