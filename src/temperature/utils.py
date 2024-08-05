@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-    data
-    ~~~~
+data
+~~~~
 
-    Utility functions and classes.
+Utility functions and classes.
 """
+
 from typing import Tuple
 
 import ipopt
@@ -17,15 +18,17 @@ import process
 
 class TempData:
     """Temperature data class"""
+
     def __init__(
-            self,
-            mean_temp,
-            daily_temp,
-            obs_mean,
-            obs_std,
-            study_id,
-            data_id,
-            trimming_weights=None):
+        self,
+        mean_temp,
+        daily_temp,
+        obs_mean,
+        obs_std,
+        study_id,
+        data_id,
+        trimming_weights=None,
+    ):
         # pass in the data
         sort_id = np.argsort(study_id)
         self.mean_temp = mean_temp[sort_id]
@@ -40,8 +43,9 @@ class TempData:
         self.unique_mean_temp = np.unique(self.mean_temp)
 
         # construct structure
-        unique_study_id, study_sizes = np.unique(self.study_id,
-                                                 return_counts=True)
+        unique_study_id, study_sizes = np.unique(
+            self.study_id, return_counts=True
+        )
         sort_id = np.argsort(unique_study_id)
         self.unique_study_id = unique_study_id[sort_id]
         self.study_sizes = study_sizes[sort_id]
@@ -57,17 +61,19 @@ class TempData:
 
 class TrendResult:
     """Trend fitting result"""
+
     def __init__(
-            self,
-            beta,
-            beta_var,
-            gamma,
-            random_effects,
-            mean_temp,
-            num_beta_spline_knots=6,
-            num_gamma_spline_knots=6,
-            beta_spline_degree=3,
-            gamma_spline_degree=3):
+        self,
+        beta,
+        beta_var,
+        gamma,
+        random_effects,
+        mean_temp,
+        num_beta_spline_knots=6,
+        num_gamma_spline_knots=6,
+        beta_spline_degree=3,
+        gamma_spline_degree=3,
+    ):
         # pass in the data
         self.num_mean_temp = mean_temp.size
         assert beta.shape == (self.num_mean_temp, 2)
@@ -81,12 +87,12 @@ class TrendResult:
         # construct the splines
         self.min_mean_temp = self.mean_temp.min()
         self.max_mean_temp = self.mean_temp.max()
-        beta_spline_knots = np.linspace(self.min_mean_temp,
-                                        self.max_mean_temp,
-                                        num_beta_spline_knots)
-        gamma_spline_knots = np.linspace(self.min_mean_temp,
-                                         self.max_mean_temp,
-                                         num_gamma_spline_knots)
+        beta_spline_knots = np.linspace(
+            self.min_mean_temp, self.max_mean_temp, num_beta_spline_knots
+        )
+        gamma_spline_knots = np.linspace(
+            self.min_mean_temp, self.max_mean_temp, num_gamma_spline_knots
+        )
         # gamma_spline_knots = np.array([
         #         self.min_mean_temp,
         #         13.0,
@@ -95,19 +101,22 @@ class TrendResult:
         #         self.max_mean_temp
         #     ])
         self.beta_spline = xspline.XSpline(
-            beta_spline_knots, beta_spline_degree,
-            l_linear=True, r_linear=True)
+            beta_spline_knots, beta_spline_degree, l_linear=True, r_linear=True
+        )
         self.gamma_spline = xspline.XSpline(
-            gamma_spline_knots, gamma_spline_degree,
-            l_linear=True, r_linear=True)
+            gamma_spline_knots,
+            gamma_spline_degree,
+            l_linear=True,
+            r_linear=True,
+        )
 
         # compute the spline bases coefficients
         X_beta = self.beta_spline.design_mat(self.mean_temp)
         X_gamma = self.gamma_spline.design_mat(self.mean_temp)
-        self.c_beta = np.linalg.solve(X_beta.T.dot(X_beta),
-                                      X_beta.T.dot(beta))
-        self.c_gamma = np.linalg.solve(X_gamma.T.dot(X_gamma),
-                                       X_gamma.T.dot(gamma))
+        self.c_beta = np.linalg.solve(X_beta.T.dot(X_beta), X_beta.T.dot(beta))
+        self.c_gamma = np.linalg.solve(
+            X_gamma.T.dot(X_gamma), X_gamma.T.dot(gamma)
+        )
 
     def beta_at_mean_temp(self, mean_temp):
         """return beta(s) at given mean_temp"""
@@ -125,9 +134,10 @@ class TrendResult:
         for mt in self.mean_temp:
             gamma = np.maximum(1e-6, self.gamma_at_mean_temp(mt))
             beta = self.beta_at_mean_temp(mt)
-            re_samples.append(np.random.randn(num_samples, gamma.size)*
-                              np.sqrt(gamma))
-            # re_samples.append(beta + 
+            re_samples.append(
+                np.random.randn(num_samples, gamma.size) * np.sqrt(gamma)
+            )
+            # re_samples.append(beta +
             #     np.random.randn(num_samples, gamma.size)*np.sqrt(gamma))
 
         self.re_samples = np.dstack(re_samples)
@@ -135,14 +145,16 @@ class TrendResult:
 
 class SurfaceResult:
     """Residual fitting result"""
+
     def __init__(
-            self,
-            beta,
-            beta_var,
-            spline,
-            mean_temp,
-            daily_temp_range,
-            scale_params=[40.0, 1.25]):
+        self,
+        beta,
+        beta_var,
+        spline,
+        mean_temp,
+        daily_temp_range,
+        scale_params=[40.0, 1.25],
+    ):
         # pass in the data
         self.beta = beta
         self.beta_var = beta_var
@@ -156,69 +168,89 @@ class SurfaceResult:
         #     for i in range(self.mean_temp.size)])
         self.tmrl = mean_temp.copy()
 
-    def surface_func(self, mean_temp, daily_temp,
-                     beta=None):
+    def surface_func(self, mean_temp, daily_temp, beta=None):
         """return surface at given temp_pairs"""
         if beta is None:
             beta = self.beta
         num_points = mean_temp.size
-        scaled_daily_temp = scale_daily_temp(mean_temp, daily_temp,
-                                             self.scale_params)
-        X = self.spline.design_mat([mean_temp, scaled_daily_temp],
-                                  is_grid=False,
-                                  l_extra_list=[True, True],
-                                  r_extra_list=[True, True])
+        scaled_daily_temp = scale_daily_temp(
+            mean_temp, daily_temp, self.scale_params
+        )
+        X = self.spline.design_mat(
+            [mean_temp, scaled_daily_temp],
+            is_grid=False,
+            l_extra_list=[True, True],
+            r_extra_list=[True, True],
+        )
         return X.dot(beta)
 
     def sample_fixed_effects(self, num_samples):
         """sample the fixed effects"""
         beta_samples = np.random.multivariate_normal(
-                self.beta, self.beta_var, num_samples)
+            self.beta, self.beta_var, num_samples
+        )
 
         self.beta_samples = beta_samples
 
-    def tmrl_at_mean_temp(self, mean_temp, num_points=100,
-                          daily_temp_range=None):
+    def tmrl_at_mean_temp(
+        self, mean_temp, num_points=100, daily_temp_range=None
+    ):
         if daily_temp_range is None:
-            lb = (mean_temp - 50.0)/44.0
+            lb = (mean_temp - 50.0) / 44.0
             scaled_daily_temp = np.linspace(lb, 0.7, num_points)
-            daily_temp = unscale_daily_temp(mean_temp,
-                                            scaled_daily_temp,
-                                            self.scale_params)
+            daily_temp = unscale_daily_temp(
+                mean_temp, scaled_daily_temp, self.scale_params
+            )
         else:
-            lb = np.maximum((mean_temp - 50.0)/44.0,
-                            scale_daily_temp(mean_temp,
-                                             np.array([daily_temp_range[0]]),
-                                             self.scale_params)[0]*0.7)
-            ub = np.minimum(0.7,
-                            scale_daily_temp(mean_temp,
-                                             np.array([daily_temp_range[1]]),
-                                             self.scale_params)[0]*0.7)
-            lb = unscale_daily_temp(mean_temp, np.array([lb]),
-                                    self.scale_params)[0]
-            ub = unscale_daily_temp(mean_temp, np.array([ub]),
-                                    self.scale_params)[0]
+            lb = np.maximum(
+                (mean_temp - 50.0) / 44.0,
+                scale_daily_temp(
+                    mean_temp,
+                    np.array([daily_temp_range[0]]),
+                    self.scale_params,
+                )[0]
+                * 0.7,
+            )
+            ub = np.minimum(
+                0.7,
+                scale_daily_temp(
+                    mean_temp,
+                    np.array([daily_temp_range[1]]),
+                    self.scale_params,
+                )[0]
+                * 0.7,
+            )
+            lb = unscale_daily_temp(
+                mean_temp, np.array([lb]), self.scale_params
+            )[0]
+            ub = unscale_daily_temp(
+                mean_temp, np.array([ub]), self.scale_params
+            )[0]
             daily_temp = np.linspace(lb, ub, num_points)
 
-        val = self.surface_func(np.repeat(mean_temp, num_points),
-                                daily_temp)
+        val = self.surface_func(np.repeat(mean_temp, num_points), daily_temp)
 
         return daily_temp[np.argmin(val)]
 
 
 def scale_daily_temp(mean_temp, daily_temp, scale_params):
     """linear scale daily temp"""
-    scaled_daily_temp = (daily_temp - mean_temp)/\
-            (scale_params[0] - scale_params[1]*mean_temp)
+    scaled_daily_temp = (daily_temp - mean_temp) / (
+        scale_params[0] - scale_params[1] * mean_temp
+    )
 
     return scaled_daily_temp
 
+
 def unscale_daily_temp(mean_temp, scaled_daily_temp, scale_params):
     """scale back the daily temp"""
-    daily_temp = scaled_daily_temp*\
-        (scale_params[0] - scale_params[1]*mean_temp) + mean_temp
+    daily_temp = (
+        scaled_daily_temp * (scale_params[0] - scale_params[1] * mean_temp)
+        + mean_temp
+    )
 
     return daily_temp
+
 
 def sizes_to_slices(sizes):
     """convert sizes to slices"""
@@ -231,58 +263,59 @@ def sizes_to_slices(sizes):
 
 def fit_line(obs_mean, obs_std, cov):
     """
-        Fit a line by give observations,
-        return intercept, slope (beta) and their postier covariance
+    Fit a line by give observations,
+    return intercept, slope (beta) and their postier covariance
     """
     y = obs_mean
     v = obs_std**2
     x = cov
     M = np.vstack((np.ones(x.size), x)).T
 
-    beta_var = np.linalg.inv((M.T/v).dot(M))
-    beta = beta_var.dot((M.T/v).dot(y))
+    beta_var = np.linalg.inv((M.T / v).dot(M))
+    beta = beta_var.dot((M.T / v).dot(y))
 
     return beta, beta_var
 
 
 def fit_spline(obs_mean, obs_std, cov, spline):
-    """Fit a spline by given observatinos and spline
-    """
+    """Fit a spline by given observatinos and spline"""
 
     M = spline.design_mat(cov)
-    beta = np.linalg.solve((M.T/obs_std**2).dot(M),
-                           (M.T/obs_std**2).dot(obs_mean))
+    beta = np.linalg.solve(
+        (M.T / obs_std**2).dot(M), (M.T / obs_std**2).dot(obs_mean)
+    )
 
     # residual = (obs_mean - M.dot(beta))/obs_std
     # print(np.std(residual))
 
     return beta
 
-def create_grid_points(mts, ddt,
-                       scaled_dt_range=[-1.0, 0.8],
-                       scale_params=[40.0, 1.25]):
+
+def create_grid_points(
+    mts, ddt, scaled_dt_range=[-1.0, 0.8], scale_params=[40.0, 1.25]
+):
     mt_list = []
     dt_list = []
     for mt in mts:
         mt_sub, dt_sub = create_grid_points_at_mean_temp(
-                mt, ddt,
-                scaled_dt_range=scaled_dt_range,
-                scale_params=scale_params,
-            )
+            mt,
+            ddt,
+            scaled_dt_range=scaled_dt_range,
+            scale_params=scale_params,
+        )
         mt_list.append(mt_sub)
         dt_list.append(dt_sub)
     return np.hstack(mt_list), np.hstack(dt_list)
 
 
-def create_grid_points_at_mean_temp(mt, ddt,
-                                    scaled_dt_range=[-1.0, 0.8],
-                                    scale_params=[40.0, 1.25]):
-    scaled_ddt = ddt/(scale_params[0] - scale_params[1]*mt)
-    scaled_dt = np.arange(scaled_dt_range[0],
-                          scaled_dt_range[1], scaled_ddt)
+def create_grid_points_at_mean_temp(
+    mt, ddt, scaled_dt_range=[-1.0, 0.8], scale_params=[40.0, 1.25]
+):
+    scaled_ddt = ddt / (scale_params[0] - scale_params[1] * mt)
+    scaled_dt = np.arange(scaled_dt_range[0], scaled_dt_range[1], scaled_ddt)
     dt = unscale_daily_temp(mt, scaled_dt, scale_params)
 
-    return np.repeat(mt, dt.size), dt    
+    return np.repeat(mt, dt.size), dt
 
 
 def create_grid_points_alt(mts, ddt, tdata):
@@ -291,16 +324,18 @@ def create_grid_points_alt(mts, ddt, tdata):
     for mt in mts:
         tdata_amt = process.extract_at_mean_temp(tdata, mt)
         mt_sub, dt_sub = create_grid_points_at_mean_temp_alt(
-                mt, ddt,
-                dt_lb=tdata_amt.daily_temp.min(),
-                dt_ub=tdata_amt.daily_temp.max()
-            )
+            mt,
+            ddt,
+            dt_lb=tdata_amt.daily_temp.min(),
+            dt_ub=tdata_amt.daily_temp.max(),
+        )
         mt_list.append(mt_sub)
         dt_list.append(dt_sub)
     return np.hstack(mt_list), np.hstack(dt_list)
 
 
-def create_grid_points_at_mean_temp_alt(mt: float, ddt: float, 
-    dt_lb: float, dt_ub: float) -> Tuple[np.ndarray]:
+def create_grid_points_at_mean_temp_alt(
+    mt: float, ddt: float, dt_lb: float, dt_ub: float
+) -> Tuple[np.ndarray]:
     dt = np.arange(dt_lb, dt_ub + ddt, ddt)
     return np.repeat(mt, dt.size), dt
