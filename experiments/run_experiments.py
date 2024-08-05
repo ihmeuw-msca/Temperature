@@ -15,24 +15,21 @@ Here is the outcome list:
 * neonatal
 """
 
-import numpy as np
-import pandas as pd
-import importlib
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 import os
 import sys
-import pickle
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "../src"))
-# sys.path.append("../src")
-sys.path.append(os.path.join(os.path.dirname(__file__), "../src/temperature"))
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from pplkit.data.interface import DataInterface
 
-import utils
-import process
-import viz
-import actions
-import score
+from temperature import (
+    actions,
+    process,
+    score,
+    utils,
+    viz,
+)
 
 DATA_PATH = {
     # 'old_data':'/home/j/temp/zhengp/temperature_current/data/'\
@@ -47,10 +44,15 @@ DATA_PATH = {
 
 
 def run_temp_model(
-    outcome, path_to_data, path_to_result_folder, n_samples=1000
+    outcome: str,
+    path_to_data: str,
+    path_to_result_folder: str,
+    n_samples: int = 1000,
 ):
-    if not os.path.exists(path_to_result_folder):
-        os.makedirs(path_to_result_folder)
+    dataif = DataInterface(
+        data=path_to_data,
+        result=path_to_result_folder,
+    )
 
     # # get temp stuff
     # df = pd.read_csv(path_to_data)
@@ -69,16 +71,11 @@ def run_temp_model(
     # -------------------------------------------------------------------------
     tdata = process.load_data(path_to_data, outcome)
     tdata = actions.mtslice.adjust_mean(tdata)
-    with open(
-        path_to_result_folder + "/" + outcome + "_tdata.pkl", "wb"
-    ) as fwrite:
-        pickle.dump(tdata, fwrite, -1)
+    dataif.dump_result(tdata, f"{outcome}_tdata.pkl")
+
     tdata_agg = actions.mtslice.aggregate_mtslice(tdata)
     tdata_agg = actions.mtslice.adjust_agg_std(tdata_agg)
-    with open(
-        path_to_result_folder + "/" + outcome + "_tdata_agg.pkl", "wb"
-    ) as fwrite:
-        pickle.dump(tdata_agg, fwrite, -1)
+    dataif.dump_result(tdata_agg, f"{outcome}_tdata_agg.pkl")
 
     # fit the mean surface
     # -------------------------------------------------------------------------
@@ -86,24 +83,15 @@ def run_temp_model(
     surface_result = actions.surface.fit_surface(
         tdata_agg, linear_no_mono=linear_no_mono
     )
-    with open(
-        path_to_result_folder + "/" + outcome + "_surface_result.pkl", "wb"
-    ) as fwrite:
-        pickle.dump(surface_result, fwrite, -1)
+    dataif.dump_result(surface_result, f"{outcome}_surface_result.pkl")
 
     # fit the study structure in the residual
     # -------------------------------------------------------------------------
     trend_result, tdata_residual = actions.mtslice.fit_trend(
         tdata, surface_result, inlier_pct=0.95
     )
-    with open(
-        path_to_result_folder + "/" + outcome + "_trend_result.pkl", "wb"
-    ) as fwrite:
-        pickle.dump(trend_result, fwrite, -1)
-    with open(
-        path_to_result_folder + "/" + outcome + "_tdata_residual.pkl", "wb"
-    ) as fwrite:
-        pickle.dump(tdata_residual, fwrite, -1)
+    dataif.dump_result(trend_result, f"{outcome}_trend_result.pkl")
+    dataif.dump_result(tdata_residual, f"{outcome}_tdata_residual.pkl")
 
     # predict surface with UI
     # -----------------------------------------------------------------------------
@@ -123,17 +111,12 @@ def run_temp_model(
         columns=["annual_temperature", "daily_temperature"]
         + [f"draw_{i}" for i in range(n_samples)],
     )
-    curve_samples_df.to_csv(
-        path_to_result_folder + "/" + outcome + "_curve_samples.csv",
-        index=False,
-    )
+    dataif.dump_result(curve_samples_df, f"{outcome}_curve_samples.parquet")
 
     evidence_score = score.scorelator(
         curve_samples_df, trend_result, tdata, outcome, path_to_result_folder
     )
-    evidence_score.to_csv(
-        path_to_result_folder + "/" + outcome + "_score.csv", index=False
-    )
+    dataif.dump_result(evidence_score, f"{outcome}_score.csv")
 
     del curve_samples, curve_samples_df
 
@@ -142,7 +125,7 @@ def run_temp_model(
     # 3D surface and the level plot
     actions.surface.plot_surface(tdata_agg, surface_result)
     plt.savefig(
-        path_to_result_folder + "/" + outcome + "_surface.pdf",
+        dataif.result / f"{outcome}_surface.pdf",
         bbox_inches="tight",
     )
     # plot uncertainty for each mean temp (can be subset of this)
@@ -155,7 +138,7 @@ def run_temp_model(
         ax.set_xlabel("daily temperature")
         ax.set_title(outcome + " at mean temperature %i" % mt)
         fig.savefig(
-            path_to_result_folder + "/" + outcome + "_slice_%i.pdf" % mt,
+            dataif.result / f"{outcome}_slice_{int(mt)}.pdf",
             bbox_inches="tight",
         )
         plt.close(fig)
