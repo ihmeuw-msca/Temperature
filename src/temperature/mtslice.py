@@ -10,7 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import xspline
 import limetr
-import utils
+from temperature import utils
 import copy
 
 

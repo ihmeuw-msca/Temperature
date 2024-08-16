@@ -6,14 +6,12 @@ surface
 surface model contains all the action w.r.t. the surface.
 """
 
-import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
+import numpy as np
 import xspline
-import limetr
-import mrbrt
-import utils
-import mtslice
+from mpl_toolkits.mplot3d import Axes3D
+
+from temperature import mrbrt, mtslice, utils
 
 
 # fit

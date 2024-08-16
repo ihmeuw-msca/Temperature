@@ -8,12 +8,10 @@ Utility functions and classes.
 
 from typing import Tuple
 
-import ipopt
 import numpy as np
-import pandas as pd
 import xspline
 
-import process
+from temperature import process
 
 
 class TempData:
@@ -133,7 +131,7 @@ class TrendResult:
         re_samples = []
         for mt in self.mean_temp:
             gamma = np.maximum(1e-6, self.gamma_at_mean_temp(mt))
-            beta = self.beta_at_mean_temp(mt)
+            # beta = self.beta_at_mean_temp(mt)
             re_samples.append(
                 np.random.randn(num_samples, gamma.size) * np.sqrt(gamma)
             )
@@ -172,7 +170,7 @@ class SurfaceResult:
         """return surface at given temp_pairs"""
         if beta is None:
             beta = self.beta
-        num_points = mean_temp.size
+        # num_points = mean_temp.size
         scaled_daily_temp = scale_daily_temp(
             mean_temp, daily_temp, self.scale_params
         )

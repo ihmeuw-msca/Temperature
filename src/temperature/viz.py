@@ -8,10 +8,11 @@ Functions for visiualization of data.
 
 import matplotlib.pyplot as plt
 import numpy as np
-from mpl_toolkits.mplot3d import Axes3D
 
-import process
-import utils
+from temperature import (
+    process,
+    utils,
+)
 
 
 def plot_surface(agg_tdata, surface_result, num_levels=10):
