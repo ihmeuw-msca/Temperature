@@ -2,7 +2,6 @@
 import numpy as np
 import cdd
 import ipopt
-from xspline import XSpline
 
 
 # different function forms and its jacobians

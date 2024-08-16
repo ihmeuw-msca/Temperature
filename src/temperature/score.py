@@ -1,11 +1,9 @@
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from temperature import (
-    process,
-    utils,
-)
-import matplotlib.pyplot as plt
+from temperature import process, utils
+
 
 def scorelator(
     df, trend_result, tdata, outcome, path_to_result_folder, n_samples=10000
@@ -96,7 +94,7 @@ def plot_score(
     plt.xlabel("Daily temperature")
     plt.title(f"Mean temperature at {mean_temp}, score: {np.round(score, 4)}")
     plt.savefig(
-        path_to_result_folder + "/" + outcome + "_score_%i.pdf" % mean_temp,
+        path_to_result_folder / f"{outcome}_score_{int(mean_temp)}.pdf",
         bbox_inches="tight",
     )
     plt.close()

@@ -6,13 +6,15 @@ process
 Functions for processing the data.
 """
 
+import copy
+from pathlib import Path
+
+import limetr
 import numpy as np
 import pandas as pd
-import copy
 import xspline
-import limetr
-import mrbrt
-from temperature import utils
+
+from temperature import mrbrt, utils
 
 
 def offsite_data(tdata):
@@ -51,9 +53,14 @@ def offsite_data_at_mean_temp(tdata, mean_temp):
     return tdata_at_mean_temp
 
 
-def load_data(path_to_data, outcome):
+def load_data(path_to_data: Path, outcome):
     """load data csv file"""
-    df = pd.read_csv(path_to_data)
+    if path_to_data.suffix == ".parquet":
+        df = pd.read_parquet(path_to_data)
+    elif path_to_data.suffix == ".csv":
+        df = pd.read_csv(path_to_data)
+    else:
+        raise ValueError("Invalid file type")
 
     mean_temp = df["meanTempDegree"].values
     daily_temp = df["dailyTempCat"].values

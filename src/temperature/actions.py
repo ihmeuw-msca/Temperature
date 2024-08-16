@@ -5,7 +5,4 @@ actions
 
 Contains all the actions w.r.t. slices and the surface.
 """
-from temperature import (
-    mtslice,
-    surface,
-)
+
