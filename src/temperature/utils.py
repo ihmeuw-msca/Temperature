@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import xspline
 
-import process
+from temperature import process
 
 
 class TempData:

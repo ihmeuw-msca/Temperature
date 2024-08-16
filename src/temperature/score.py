@@ -1,10 +1,11 @@
 import numpy as np
 import pandas as pd
 
-import process
-import utils
+from temperature import (
+    process,
+    utils,
+)
 import matplotlib.pyplot as plt
-
 
 def scorelator(
     df, trend_result, tdata, outcome, path_to_result_folder, n_samples=10000
